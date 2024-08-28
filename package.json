@@ -2,16 +2,18 @@
   "name": "cliniko-whatsapp-integration",
   "version": "1.0.0",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "Daniel Leong",
   "license": "ISC",
-  "description": "",
+  "description": "Learning how to use APIs",
   "dependencies": {
     "axios": "^1.7.3",
     "dotenv": "^16.4.5",
     "twilio": "^5.2.2"
-  }
+  },
+  "devDependencies": {}
 }
