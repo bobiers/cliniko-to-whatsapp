@@ -20,7 +20,7 @@ const formattedTomorrow = formatDate(tomorrow);
 const fetchBookings = async (endDate) => {
     try {
 
-      const encodedApiKey = btoa(`${clinikoApiKey}:`);
+      const encodedApiKey = btoa(`${clinikoApiKey}:`); //decode the API key to a base64 decoder used for Authentication
     
       const response = await axios.get(`https://api.au2.cliniko.com/v1/individual_appointments?q[]=starts_at:>=${endDate}T00:00:00Z&q[]=starts_at:<=${endDate} T23:59:59Z`,{ //the endpoint of the API for tomorrow's date
           headers: {
@@ -32,11 +32,19 @@ const fetchBookings = async (endDate) => {
   
       // Log the response data to see if the fetch is successful
       // data.individual_appointments is an array (try to fetch the patient_name, id, start_at details)
-      const bookings = response.individual_appointments;
-      bookings.forEach(element => {
-        
+      const bookings = response.data.individual_appointments;
+      bookings.forEach(booking=>{
+          //fetching the details needed from the response data
+          const patientName= booking.patient_name;
+          const patientId = booking.id;
+
+          //making sure the timing is local timing
+          const utcDate = new Date(booking.starts_at);
+          const appointmentTime = utcDate.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})
+
+          console.log(`Name: ${patientName}, ID: ${patientId}, Appointment Time: ${appointmentTime}`);
       });
-      console.log('Bookings fetched successfully:', response.data.individual_appointments);
+
       // return response.data.bookings;
     } catch (error) {
         console.error('Error fetching bookings:', error.message);
