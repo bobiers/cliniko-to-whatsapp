@@ -10,6 +10,8 @@ dotenv.config();
 // const whatsappNumber = process.env.TWILIO_WHATSAPP_NUMBER;
 const clinikoApiKey = process.env.CLINIKO_API_KEY;
 
+const patientID=[];
+
 const today = new Date() // get today's date
 const tomorrow = new Date(today)
 tomorrow.setDate(today.getDate() + 1) // Add 1 to today's date and set it to tomorrow
@@ -28,8 +30,9 @@ function authentication(apiKey){
 
 const logBookingDetails = (booking) => {
   const patientName = booking.patient_name;
-  const patientId = booking.id;
-  
+  const patient = booking.patient.links.self; // to get the links for the patient in order to get the patient's ID. example:"https://api.au2.cliniko.com/v1/patients/1134434436490729794"
+  const patientId = patient.split('/').pop();
+  patientID.push(patientId);
   // Making sure the timing is local timing
   const utcDate = new Date(booking.starts_at);
   const appointmentTime = utcDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -46,8 +49,10 @@ const fetchBookings = async (endDate) => {
       // Log the response data to see if the fetch is successful
       // data.individual_appointments is an array (try to fetch the patient_name, id, start_at details)
       const bookings = response.data.individual_appointments;
+      
       bookings.map((booking) => {
         logBookingDetails(booking);
+        console.log(JSON.stringify(booking.patient.links.self));
       });
       
       // return response.data.bookings;
@@ -58,10 +63,10 @@ const fetchBookings = async (endDate) => {
   };
 
 
-const fetchPhoneNumber = async()=>{
+const fetchPhoneNumber = async(id)=>{
 
   try {
-    const response = await axios.get(`https://api.au2.cliniko.com/v1/contacts/${"1496236805446441304"}`,{headers: authentication(clinikoApiKey)}); //can't use the id we got from fetchBookings. Under fetchBookings.data there's a data entry called patients, need to look into that
+    const response = await axios.get(`https://api.au2.cliniko.com/v1/patients/${id}`,{headers: authentication(clinikoApiKey)}); //can't use the id we got from fetchBookings. Under fetchBookings.data there's a data entry called patients, need to look into that
     console.log(response.data);
   } catch (error) {
     console.error('Error fetching bookings:', error.message);
@@ -72,7 +77,7 @@ const fetchPhoneNumber = async()=>{
 
 const main = async () => {
   await fetchBookings(formattedTomorrow);
-  await fetchPhoneNumber();
+  await fetchPhoneNumber(patientID);
 };
 
 main(); // Run the main function
