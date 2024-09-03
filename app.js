@@ -10,7 +10,10 @@ dotenv.config();
 // const whatsappNumber = process.env.TWILIO_WHATSAPP_NUMBER;
 const clinikoApiKey = process.env.CLINIKO_API_KEY;
 
-const patientID=[];
+const patientIds=[];
+const patientPhoneNumbers=[];
+const patientAppointmentTimes=[];
+const patientNames=[]
 
 const today = new Date() // get today's date
 const tomorrow = new Date(today)
@@ -18,7 +21,7 @@ tomorrow.setDate(today.getDate() + 1) // Add 1 to today's date and set it to tom
 const formatDate = (date) => date.toISOString().split('T')[0];
 const formattedTomorrow = formatDate(tomorrow);
 
-function authentication(apiKey){
+function createAuthenticationHeader(apiKey){
   const encodedApiKey = btoa(`${apiKey}:`); // Decode the API key to a base64 decoder used for Authentication
   const headers = {
     'Authorization': `Basic ${encodedApiKey}`,
@@ -30,29 +33,41 @@ function authentication(apiKey){
 
 const logBookingDetails = (booking) => {
   const patientName = booking.patient_name;
-  const patient = booking.patient.links.self; // to get the links for the patient in order to get the patient's ID. example:"https://api.au2.cliniko.com/v1/patients/1134434436490729794"
-  const patientId = patient.split('/').pop();
-  patientID.push(patientId);
+  const patientLink = booking.patient.links.self; // to get the links for the patient in order to get the patient's ID. example:"https://api.au2.cliniko.com/v1/patients/1134434436490729794"
+  const patientId = patientLink.split('/').pop();
+  
   // Making sure the timing is local timing
   const utcDate = new Date(booking.starts_at);
-  const appointmentTime = utcDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const patientAppointmentTime = utcDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-  console.log(`Name: ${patientName}, ID: ${patientId}, Appointment Time: ${appointmentTime}`);
-};
+  console.log(`Name: ${patientName}, ID: ${patientId}, Appointment Time: ${patientAppointmentTime}`);
+  patientName.push(patientNames);
+  patientIds.push(patientId);
+  patientAppointmentTime.push(patientAppointmentTimes);
 
+};//logging the details to check
+
+const logPhoneNumberDetails = (patientNumber)=>{
+  
+  const patientPhoneNumber = patientNumber.number;
+  patientPhoneNumbers.push(patientPhoneNumber); 
+  
+  console.log(patientPhoneNumber);
+  console.log(patientPhoneNumbers);
+}
 
 const fetchBookings = async (endDate) => {
     try {
     
-      const response = await axios.get(`https://api.au2.cliniko.com/v1/individual_appointments?q[]=starts_at:>=${endDate}T00:00:00Z&q[]=starts_at:<=${endDate} T23:59:59Z`,{headers: authentication(clinikoApiKey)});//the endpoint of the API for tomorrow's date
+      const response = await axios.get(`https://api.au2.cliniko.com/v1/individual_appointments?q[]=starts_at:>=${endDate}T00:00:00Z&q[]=starts_at:<=${endDate} T23:59:59Z`,{headers: createAuthenticationHeader(clinikoApiKey)});//the endpoint of the API for tomorrow's date
 
       // Log the response data to see if the fetch is successful
       // data.individual_appointments is an array (try to fetch the patient_name, id, start_at details)
-      const bookings = response.data.individual_appointments;
+      const appointments  = response.data.individual_appointments;
       
-      bookings.map((booking) => {
+      appointments.map((booking) => {
         logBookingDetails(booking);
-        console.log(JSON.stringify(booking.patient.links.self));
+        // console.log(JSON.stringify(booking.patient.links.self));
       });
       
       // return response.data.bookings;
@@ -60,24 +75,38 @@ const fetchBookings = async (endDate) => {
         console.error('Error fetching bookings:', error.message);
         return null;
     }
-  };
+  };//fetch the appointment made by patients the next day 
 
 
 const fetchPhoneNumber = async(id)=>{
 
   try {
-    const response = await axios.get(`https://api.au2.cliniko.com/v1/patients/${id}`,{headers: authentication(clinikoApiKey)}); //can't use the id we got from fetchBookings. Under fetchBookings.data there's a data entry called patients, need to look into that
-    console.log(response.data);
+    const response = await axios.get(`https://api.au2.cliniko.com/v1/patients/${id}`,{headers: createAuthenticationHeader(clinikoApiKey)}); //can't use the id we got from fetchBookings. Under fetchBookings.data there's a data entry called patients, need to look into that
+    const phoneNumbers = response.data.patient_phone_numbers; //phone number array for patients
+    
+    if (!phoneNumbers || phoneNumbers.length === 0) {
+      patientPhoneNumbers.push(" "); // Push an empty string if no phone numbers
+    } else {
+      // If phoneNumbers exist, iterate and log each phone number
+      phoneNumbers.map((phoneNumber) => {
+        logPhoneNumberDetails(phoneNumber);
+      });
+    }
+
   } catch (error) {
     console.error('Error fetching bookings:', error.message);
     return null;
   }
 
-};
+};//fetch the phone number from the patient with their IDs
 
 const main = async () => {
   await fetchBookings(formattedTomorrow);
-  await fetchPhoneNumber(patientID);
+  // look all the patient's ID to the fetchPhoneNumber function to get all the phone numbers
+  for (let i =0; i<patientIds.length ; i++){
+    await fetchPhoneNumber(patientIds[i]);
+  }
+  
 };
 
 main(); // Run the main function
