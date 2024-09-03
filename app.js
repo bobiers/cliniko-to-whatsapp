@@ -1,13 +1,13 @@
 import dotenv from 'dotenv';
 import axios from 'axios';
-// import twilio from 'twilio';
+import twilio from 'twilio';
 
 dotenv.config();
 
-// const accountSid = process.env.TWILIO_ACCOUNT_SID;
-// const authToken = process.env.TWILIO_AUTH_TOKEN;
-// const client = twilio(accountSid,authToken);
-// const whatsappNumber = process.env.TWILIO_WHATSAPP_NUMBER;
+const accountSid = process.env.TWILIO_ACCOUNT_SID;
+const authToken = process.env.TWILIO_AUTH_TOKEN;
+const client = twilio(accountSid,authToken);
+const whatsappNumber = process.env.TWILIO_WHATSAPP_NUMBER;
 const clinikoApiKey = process.env.CLINIKO_API_KEY;
 
 const patientIds=[];
@@ -41,9 +41,9 @@ const logBookingDetails = (booking) => {
   const patientAppointmentTime = utcDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   console.log(`Name: ${patientName}, ID: ${patientId}, Appointment Time: ${patientAppointmentTime}`);
-  patientName.push(patientNames);
+  patientNames.push(patientName);
   patientIds.push(patientId);
-  patientAppointmentTime.push(patientAppointmentTimes);
+  patientAppointmentTimes.push(patientAppointmentTime);
 
 };//logging the details to check
 
@@ -94,18 +94,34 @@ const fetchPhoneNumber = async(id)=>{
     }
 
   } catch (error) {
-    console.error('Error fetching bookings:', error.message);
+    console.error('Error fetching phone number:', error.message);
     return null;
   }
 
 };//fetch the phone number from the patient with their IDs
+
+const sendWhatsAppMessage = async (phoneNumber, message) => {
+  try {
+    const response = await client.messages.create({
+      from: `whatsapp:${whatsappNumber}`, // Sending from your Twilio WhatsApp number
+      to: `whatsapp:${phoneNumber}`, // Sending to patient's WhatsApp number
+      body: message, // Message content
+    });
+
+    console.log(`Message sent to ${phoneNumber}: ${response.sid}`);
+    console.log(response);
+  } catch (error) {
+    console.error(`Failed to send message to ${phoneNumber}:`, error.message);
+  }
+};
 
 const main = async () => {
   await fetchBookings(formattedTomorrow);
   // look all the patient's ID to the fetchPhoneNumber function to get all the phone numbers
   for (let i =0; i<patientIds.length ; i++){
     await fetchPhoneNumber(patientIds[i]);
-  }
+  };
+  sendWhatsAppMessage(`+60102793422`,"Hello");
   
 };
 
