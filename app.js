@@ -100,12 +100,17 @@ const fetchPhoneNumber = async(id)=>{
 
 };//fetch the phone number from the patient with their IDs
 
-const sendWhatsAppMessage = async (phoneNumber, message) => {
+const sendWhatsAppMessage = async (phoneNumber, appointmentTime, patientName) => {
   try {
     const response = await client.messages.create({
       from: `whatsapp:${whatsappNumber}`, // Sending from your Twilio WhatsApp number
       to: `whatsapp:${phoneNumber}`, // Sending to patient's WhatsApp number
-      body: message, // Message content
+      contentSid: 'HXf9726153a859380d97b55b6e9b16b374', // Replace with your Content SID
+      contentVariables: JSON.stringify({
+        1: patientName,  // Replace with the dynamic data for your template
+        2: appointmentTime // Replace with the dynamic data for your template
+      }),
+      body: `Hello ${patientName}, this is a reminder for your appointment at ${appointmentTime}.` // Replace 'body' with 'template' if using template messaging
     });
 
     console.log(`Message sent to ${phoneNumber}: ${response.sid}`);
@@ -117,12 +122,24 @@ const sendWhatsAppMessage = async (phoneNumber, message) => {
 
 const main = async () => {
   await fetchBookings(formattedTomorrow);
-  // look all the patient's ID to the fetchPhoneNumber function to get all the phone numbers
-  for (let i =0; i<patientIds.length ; i++){
+
+  // Fetch all patient phone numbers
+  for (let i = 0; i < patientIds.length; i++) {
     await fetchPhoneNumber(patientIds[i]);
-  };
-  sendWhatsAppMessage(`+60102793422`,"Hello");
-  
+  }
+
+  // Send WhatsApp message only to patients with valid phone numbers
+  for (let j = 0; j < patientPhoneNumbers.length; j++) {
+    if (patientPhoneNumbers[j].trim() !== "") {  // Check if the phone number is not an empty string
+      await sendWhatsAppMessage(
+        patientPhoneNumbers[j],
+        patientAppointmentTimes[j],
+        patientNames[j]
+      );
+    } else {
+      console.log(`Skipping patient with ID ${patientIds[j]} due to missing phone number.`);
+    }
+  }
 };
 
 main(); // Run the main function
